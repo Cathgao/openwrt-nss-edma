@@ -89,7 +89,7 @@ NSS memory profiles are a build-time choice for the whole image:
 | group | boards | memory profile |
 |---|---|---|
 | `std` | 512 MB and 1 GB boards (the release notes list them) | ath11k 1G, NSS medium |
-| `256m` | Cudy P5, Ruijie RG-MA3063, TP-Link Archer AX53 v2, TP-Link Archer AX58 v2, TP-Link EX511 v2, Xiaomi CR8806 (also CR8808, CR8809, Redmi AX3000), Xiaomi Redmi AX3000 (single rootfs layout), Xiaomi Mi Router AX3000T v2 | ath11k 256M, NSS low |
+| `256m` | Cudy P5, H3C Magic NX30, H3C Magic RC3000 v1, v2 and v3, Ruijie RG-MA3063, TP-Link Archer AX53 v2, TP-Link Archer AX58 v2, TP-Link EX511 v2, Xiaomi CR8806 (also CR8808, CR8809, Redmi AX3000), Xiaomi Redmi AX3000 (single rootfs layout), Xiaomi Mi Router AX3000T v2 | ath11k 256M, NSS low |
 
 The exact configuration of each group is in `.github/ci/ipq50xx/` (`common.config`
 + `<group>.config` + `kmods-extra.config`) and, for a given release, in the
@@ -1000,9 +1000,12 @@ Measured with iperf3 `-P 8` between a phone and a wired host behind a
 1 GbE switch: 6 GHz and 5 GHz (both 160 MHz) plateau at 920-960 Mbit/s
 each way, the 1 GbE ceiling, with short dips (open) and the CPU
 92-98 % idle (6 GHz without NSS: ~250 down, 350-400 up, both cores
-saturated). 2.5G on `lan1` has not been tried. Unlike the AX6000 with
-the same QCA8081 on GMAC1, `lan1` runs with its rings in the default
-`UTCM_SHARED`.
+saturated). `lan1` also links at 2.5G on the firmware path: with a
+wired host behind it, forwarded 5 GHz Wi-Fi <-> `lan1` reached
+2.1 Gbit/s down to a 3-stream client and 1.5-1.77 Gbit/s down to a
+2-stream phone, the CPU at least 62 % idle and `lan1` 99.7 % / 100 %
+offloaded. Unlike the AX6000 with the same QCA8081 on GMAC1, `lan1`
+runs with its rings in the default `UTCM_SHARED`; those runs used it.
 
 The stock `bootipq` loader boots the active slot (`rootfs`, chosen by
 BOOTCONFIG) and increments `boot_count` before every boot from flash;
