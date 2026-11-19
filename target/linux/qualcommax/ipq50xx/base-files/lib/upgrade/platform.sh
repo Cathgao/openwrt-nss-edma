@@ -438,7 +438,9 @@ platform_do_upgrade() {
 		remove_oem_ubi_volume wifi_fw
 		glinet_do_upgrade "$1"
 		;;
+	h3c,magic-bx54-eu|\
 	h3c,magic-nx30|\
+	h3c,magic-nx54|\
 	h3c,magic-rc3000-v1|\
 	h3c,magic-rc3000-v2|\
 	h3c,magic-rc3000-v3)
@@ -554,6 +556,13 @@ platform_do_upgrade() {
 		remove_oem_ubi_volume tp_data
 		nand_do_upgrade "$1"
 		;;
+	ubnt,unifi-6-pro)
+		# OpenWrt boots from slot 1, slot 0 (0:HLOS) keeps the
+		# signed stock image
+		CI_KERNPART="0:HLOS_1"
+		CI_ROOTPART="log"
+		emmc_do_upgrade "$1"
+		;;
 	wallys,dr5018s)
 		CI_UBIPART="rootfs"
 		remove_oem_ubi_volume debug
@@ -562,7 +571,8 @@ platform_do_upgrade() {
 		remove_oem_ubi_volume wifi_fw
 		nand_do_upgrade "$1"
 		;;
-	xiaomi,cr8806)
+	xiaomi,cr8806|\
+	xiaomi,ra80)
 		# Keep the stock dual-boot layout: upgrade the slot we are
 		# running from and leave the other slot untouched.
 		# bootmiwifi boots slot flag_last_success, or the other one
@@ -664,6 +674,14 @@ platform_do_upgrade() {
 		;;
 	*)
 		default_do_upgrade "$1"
+		;;
+	esac
+}
+
+platform_copy_config() {
+	case "$(board_name)" in
+	ubnt,unifi-6-pro)
+		emmc_copy_config
 		;;
 	esac
 }

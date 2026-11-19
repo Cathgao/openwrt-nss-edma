@@ -34,7 +34,9 @@ ipq50xx_setup_interfaces()
 	avm,fritzbox-4050|\
 	cmcc,mr3000d-ci|\
 	cmcc,rax3000q|\
+	h3c,magic-bx54-eu|\
 	h3c,magic-nx30|\
+	h3c,magic-nx54|\
 	h3c,magic-rc3000-v1|\
 	h3c,magic-rc3000-v2|\
 	h3c,magic-rc3000-v3|\
@@ -64,6 +66,7 @@ ipq50xx_setup_interfaces()
 		ucidef_set_network_device_conduit "wan" "eth0"
 		;;
 	xiaomi,cr8806|\
+	xiaomi,ra80|\
 	xiaomi,redmi-ax3000-ubootmod)
 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3" "wan"
 		ucidef_set_network_device_conduit "lan1" "eth1"
@@ -78,7 +81,8 @@ ipq50xx_setup_interfaces()
 		ucidef_set_interface_lan "lan1 lan2" "dhcp"
 		;;
 	tplink,eap650-outdoor-v1|\
-	tplink,re700x)
+	tplink,re700x|\
+	ubnt,unifi-6-pro)
 		ucidef_set_interface_lan "lan" "dhcp"
 		;;
 	zte,t5400)
@@ -103,7 +107,9 @@ ipq50xx_setup_macs()
 		[ -n "$lan_mac" ] && ucidef_set_network_device_mac "eth1" "$lan_mac"
 		[ -n "$lan_mac" ] && ucidef_set_label_macaddr "$lan_mac"
 		;;
+	h3c,magic-bx54-eu|\
 	h3c,magic-nx30|\
+	h3c,magic-nx54|\
 	h3c,magic-rc3000-v1|\
 	h3c,magic-rc3000-v2|\
 	h3c,magic-rc3000-v3)

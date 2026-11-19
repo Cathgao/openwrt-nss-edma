@@ -73,6 +73,10 @@ over a running OpenWrt, from LuCI or with `sysupgrade`. There is no factory
 image: a board that is not in official OpenWrt needs a plain OpenWrt image
 built from this tree first (Quick start below), and a board that is gets the
 official one. `sha256sums-<group>.txt` next to the images has the checksums.
+The H3C Magic boards (BX54 EU, NX30, NX54, RC3000) are the exception: they are first
+installed from the stock web UI with their `factory` image
+(`…-squashfs-factory-<model>.bin`), which the release carries next to the
+sysupgrade image; the commit that adds each board has the steps.
 
 The Xiaomi Mi Router AX3000T v2 is the exception for the first install: from
 stock it is installed from a RAM-booted initramfs (steps in the commit that adds
@@ -86,7 +90,8 @@ refuse one: on those, check that `sysupgrade -T` shows only that refusal, then
 run `sysupgrade -F` once with this board's sysupgrade image.
 
 Every image is built with the whole plane in: `nss-tools-dwmac`, firmware
-12.5-210 (12.2-156 up to `ipq50xx-2026.10.14`), VLAN and PPPoE managers, ath11k with the NSS patches, plus `ip-full`
+12.5-210 in the `std` group and 12.2-156 in the `256m` group (12.2-156 in both
+up to `ipq50xx-2026.10.14`, 12.5-210 in both up to `ipq50xx-2026.11.11`), VLAN and PPPoE managers, ath11k with the NSS patches, plus `ip-full`
 and `iperf3` for checking it. Boards come in two groups, because the ath11k and
 NSS memory profiles are a build-time choice for the whole image:
 
@@ -272,14 +277,21 @@ package unset, and gives an image whose 2.4 GHz radio does not come up
 
 ### Firmware: 12.5-210 and 12.2-156
 
-The release images carry `NSS.FW.12.5-210-MP` since 15 October 2026
-(`NSS_FIRMWARE_VERSION_12_5` in `.github/ci/ipq50xx/common.config`); before
-that they carried `NSS.FW.12.2-156-MP.R` (`NSS_FIRMWARE_VERSION_12_2`), the
-newest firmware published for IPQ5018 (May 2025, nine months after 12.5),
-which most measurements in this file were taken on. On the GL-B3000 and the
-Archer AX55 v1 the two carry the same routed, bridged and 802.11s mesh traffic
-at the same speed. The feed defaults to 12.5 as well; a `.config` of your
-own that already names a version keeps it.
+The `std` release images carry `NSS.FW.12.5-210-MP` since 15 October 2026
+(`NSS_FIRMWARE_VERSION_12_5` in `.github/ci/ipq50xx/std.config`). The `256m`
+images carried it from 15 October to `ipq50xx-2026.11.11` and are back on
+`NSS.FW.12.2-156-MP.R` after it (`NSS_FIRMWARE_VERSION_12_2` in
+`.github/ci/ipq50xx/256m.config`): with 12.5-210, some 802.11ac clients (an
+MT7612U USB adapter in the report) leave payload buffers in the firmware round
+after round, a few hundred per minute of download on 5 GHz, which the small
+pool of a 256 MB board cannot afford; 12.2-156 gives them back with the same
+client (kuncy7/openwrt-nss-edma#64, measured on an H3C Magic RC3000 v1 with
+this group's config; not seen with a Wi-Fi 6 client). Before 15 October every image carried
+12.2-156, the newest firmware published for IPQ5018 (May 2025, nine months
+after 12.5), which most measurements in this file were taken on. On the
+GL-B3000 and the Archer AX55 v1 the two carry the same routed, bridged and
+802.11s mesh traffic at the same speed. The feed defaults to 12.5; a `.config`
+of your own that already names a version keeps it.
 
 **Build for the firmware you run.** The two lay out the Wi-Fi peer statistics
 differently (196 against 212 bytes per entry), and `qca-nss-drv` is built for
@@ -513,7 +525,7 @@ topology alone.
 | `fabric` | `qca8337` | which switch the trunk goes through: `qca8337` (unbind `qca8k`, re-arm with `qca8337-nss`), `rtl8367s` (an RTL8367S-VB: unbind `rtl8365mb`, re-arm with `rtl8367s-nss` - the Archer AX55 v1), or `none` on a board with no switch, or one whose DSA driver stays bound (EX511 v2): skips the unbind and the fabric module. |
 | `switch_dev` | `90000.mdio-1:11` | the switch's MDIO device, unbound from its DSA driver before the re-arm. `90000.mdio-1:18` on the I-O DATA WN-DAX3000GR and the Elecom WRC-X3000GS2 / GST2; `90000.mdio-1:1d` (address 29) for the RTL8367S on the Archer AX55 v1. |
 | `switch_args` | *(empty)* | further fabric module parameters, passed verbatim. `qca8337-nss`: `cpu_port=`, `ports=`, `wake_phys=`, `bus_via=`; `rtl8367s-nss`: `trunk_port=`, `ports=`, `phys=`, `force_val=`, `pvids=` (its defaults are the AX55 wiring). |
-| `meminfo` | *(empty; GMAC1's rings in SDRAM on the Redmi AX5400, MR5500, MX5500, and AX6000)* | where the firmware keeps the GMAC descriptor rings, written to `qca-nss-drv`'s `meminfo_user_config` before the core boots, e.g. `<0, gmac_tx_desc_1, SDRAM>, <0, gmac_rx_desc_1, SDRAM>`. With GMAC1's rings in the default `UTCM_SHARED` the port never starts on those four boards (`rs=0 ts=0`, `rx_fw=0`) - worth trying on any other board with that symptom. `default` keeps the firmware's placement on them. `grep gmac /sys/kernel/debug/qca-nss-drv/meminfo/core0` shows where they ended up. |
+| `meminfo` | *(empty; GMAC1's rings in SDRAM on the Redmi AX5400, MR5500, MX5500, AX6000, and H3C Magic NX54)* | where the firmware keeps the GMAC descriptor rings, written to `qca-nss-drv`'s `meminfo_user_config` before the core boots, e.g. `<0, gmac_tx_desc_1, SDRAM>, <0, gmac_rx_desc_1, SDRAM>`. With GMAC1's rings in the default `UTCM_SHARED` the port never starts on those five boards (`rs=0 ts=0`, `rx_fw=0`) - worth trying on any other board with that symptom. `default` keeps the firmware's placement on them. `grep gmac /sys/kernel/debug/qca-nss-drv/meminfo/core0` shows where they ended up. |
 | `fw_csum` | *(unset = off)* | `1` lets the firmware compute TX checksums and segment TSO frames for traffic the router itself sends (the glue's `fw_csum` parameter); forwarded traffic never uses either. The service writes it before any port starts, so it applies from boot. Set by hand afterwards (`/sys/module/qca_dwmac_nss/parameters/fw_csum`) it needs the GMAC's netdev taken down and up, and that closes every DSA port on it until each is brought up again. DSA ports keep the offload features they copied from the conduit when they were created, so through a switch port only the checksum is offloaded (seen on an Archer AX55: the conduit shows TSO, its ports do not); TSO needs a GMAC that is a netdev of its own. |
 | `fw_logbuf` | `256` | firmware log ring size, read at `/sys/kernel/debug/qca-nss-drv/logs` |
 
@@ -877,7 +889,15 @@ traffic within seconds, see the fixes below; measured with `wpad-mesh-mbedtls`
 managing the peerings, open and SAE). Not tried: more than one hop, 2.4 GHz,
 a peer that is not offloaded, a firmware crash with an open mesh run by the
 kernel's own peering (`wpad-basic-mbedtls`). The `256m` images are built without
-it: the mesh costs memory those boards do not have to spare.
+it: the mesh costs memory those boards do not have to spare. A mesh interface
+left in `/etc/config/wireless` on a `256m` image, kept from a `std` image for
+example, takes its whole radio down with it: the driver refuses the mesh
+interface and the access points on that radio do not come up either (seen on a
+GL-B3000 limited to 256 MB, firmware 12.2). Remove the mesh interface or set
+`option disabled '1'` on it. A mesh on a `256m` image needs the Wi-Fi on the
+host path (`nss.general.wifi_offload='0'`); ADCDS's Xiaomi AX3000T build
+measured about 20 MB less free memory that way under sustained Wi-Fi traffic.
+Not tried here.
 
 An open mesh works with the image as it is. An encrypted mesh (SAE) needs the
 full mesh-capable `wpad`, which the image does not carry - it keeps
@@ -990,11 +1010,11 @@ OOM-killed the AP daemon on a single iperf3 run. What it needed, all in the bran
     the `qca-nss-drv` package of the feed, so a board has to be named in
     both places - the EX511 v2 and the Cudy P5 are, in both; the AX3000T v2
     is named here and in kuncy7/nss-packages#4, which is not merged yet. The
-    firmware version
-  (`NSS_FIRMWARE_VERSION_12_2`) is the feed's default on ipq50xx; the release
-  images carry 12.5 since 15 October 2026, which has not been run on a 256 MB
-  board yet. `qcom,ath11k-fw-memory-mode = <2>` on both radios is in
-  the DTS.
+    firmware version of this group is 12.2-156
+  (`NSS_FIRMWARE_VERSION_12_2` in `256m.config`; the feed's default is 12.5):
+  12.5-210 ran on 256 MB boards from 15 October 2026 to `ipq50xx-2026.11.11`
+  and keeps payload buffers with some 802.11ac clients, see *Firmware*.
+  `qcom,ath11k-fw-memory-mode = <2>` on both radios is in the DTS.
 
 Result: ~850 / ~740 Mbit/s on 5 GHz with 4 streams (stock: 843 / 906),
 0 OOM, 20 MB available after the run against 3 MB before. Not done:
